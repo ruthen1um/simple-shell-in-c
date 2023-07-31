@@ -1,2 +1,5 @@
 *.o
 rush
+
+# i use ccls
+.ccls-cache
