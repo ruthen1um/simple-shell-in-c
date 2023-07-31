@@ -1,10 +1,11 @@
 #include "builtin.h"
 
 rush_builtin rush_builtins[1] = {
-  { "exit", &rush_exit },
+    { "exit", &rush_exit },
 };
 
 int rush_exit(char *args[])
 {
-  exit(EXIT_SUCCESS);
+    // special return value indicating that shell must terminate with success
+    return -1;
 }

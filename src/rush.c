@@ -2,8 +2,11 @@
 
 int main()
 {
-  /* start rush */
-  rush_loop();
+    /* start rush */
+    int status = rush_loop();
 
-  return 0;
+    if (status == -1)
+        return EXIT_SUCCESS;
+
+    return status;
 }
