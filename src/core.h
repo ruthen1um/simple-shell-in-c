@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int rush_loop();
-void print_prompt();
-void read_input(char *buffer, int size);
-void tokenize(char *buffer, char *token_buffer[], int size);
-int parse(char *token_buffer[]);
+void rush_loop();
+void rush_prompt();
+char *rush_read_line();
+char **rush_tokenize(char *line);
+int rush_execute(char **tokens);
 
 #endif

@@ -3,102 +3,120 @@
 
 #define LEN(x) (sizeof(x) / sizeof(*x))
 
-#define MAXINPUTBUFFER 1024
+#define MAXLINEBUFFER 1024
 #define MAXTOKENBUFFER 256
+#define TOKENDELIM " \t"
 
-int rush_loop()
-{
-    char *input_buffer;
-    char **token_buffer;
-
-    /*
-    * There are three possible cases of the status variable:
-    *
-    *  status == -1: shell must terminate with successful exit code
-    *  status == 0: shell loop must continue
-    *  status in range 1 - 256: shell must terminate with specified exit code
-    *
-    */
-
-    int status = 0;
-
-    do
-    {
-        input_buffer = (char *)malloc(sizeof(char) * MAXINPUTBUFFER);
-        token_buffer = (char **)malloc(sizeof(char *) * MAXTOKENBUFFER);
-
-        if ((input_buffer == NULL) || (token_buffer == NULL))
-        {
-            fprintf(stderr, "%s at line %d: couldn't allocate memory", __FILE__, __LINE__);
-            return EXIT_FAILURE;
-        }
-
-        print_prompt();
-        read_input(input_buffer, MAXINPUTBUFFER);
-        tokenize(input_buffer, token_buffer, MAXTOKENBUFFER);
-        status = parse(token_buffer);
-
-        free(input_buffer);
-        free(token_buffer);
-
-        if (status == -1)
-            return 0;
-
-        if (status < -1 && status > 255)
-        {
-            fprintf(stderr, "%s at line %d: bad status code", __FILE__, __LINE__);
-            return 1;
-        }
-
-    } while (!status);
-
-    return 0;
-}
-
-void print_prompt()
+void rush_prompt()
 {
     fputs("> ", stdout);
 }
 
-void read_input(char *buffer, int size)
+char *rush_read_line()
 {
-    /* fgets() reads (size - 1) characters and adds '\0' character at the end of the string */
-    fgets(buffer, size, stdin);
-}
+    char *line_buffer = malloc(sizeof(char) * MAXLINEBUFFER);
 
-void tokenize(char *buffer, char *token_buffer[], int size)
-{
-    int p = 0;
-    char delims[] = " \t\n\v\f\r";
-
-    token_buffer[p] = strtok(buffer, delims);
-
-    while (token_buffer[p] != NULL)
+    if (line_buffer == NULL)
     {
-        token_buffer[++p] = strtok(NULL, delims);
-
-        /* add NULL at the end if there are more tokens than (size) */
-        if (p >= size)
-        {
-            token_buffer[p - 1] = NULL;
-            return;
-        }
+        fprintf(stderr, "%s at line %d: couldn't allocate line_buffer", __FILE__, __LINE__);
+        exit(EXIT_FAILURE);
     }
 
-    token_buffer[p] = NULL;
+
+    fgets(line_buffer, MAXLINEBUFFER, stdin);
+
+    char c;
+
+    /*
+        *) if there is no '\n' character in line_buffer, it means that more characters than MAXLINEBUFFER were entered,
+        so we need to erase characters left after fgets()
+
+        *) if there is a '\n' character, we do not want to include it in line_buffer
+    */
+
+    if (strchr(line_buffer, '\n') == NULL)
+        while ((c = getc(stdin)) != '\n' && c != EOF);
+    else
+        line_buffer[strcspn(line_buffer, "\n")] = 0;
+
+    return line_buffer;
 }
 
-int parse(char *token_buffer[])
+char **rush_tokenize(char *line)
 {
-    if (token_buffer[0] == NULL)
+    char **token_buffer = malloc(sizeof(char *) * MAXTOKENBUFFER);
+
+    if (token_buffer == NULL)
+    {
+        fprintf(stderr, "%s at line %d: couldn't allocate token_buffer", __FILE__, __LINE__);
+        exit(EXIT_FAILURE);
+    }
+
+    int p = 0;
+
+    token_buffer[p] = strtok(line, TOKENDELIM);
+
+    if (token_buffer[p] == NULL)
+        return token_buffer;
+
+    p++;
+
+    char *token;
+
+    while (1)
+    {
+        token = strtok(NULL, TOKENDELIM);
+
+        if (token == NULL && p < MAXTOKENBUFFER)
+        {
+            token_buffer[p] = token;
+            break;
+        }
+
+        if (p == MAXTOKENBUFFER)
+        {
+            token_buffer[MAXTOKENBUFFER - 1] = NULL;
+            break;
+        }
+
+        token_buffer[p++] = token;
+    }
+
+    return token_buffer;
+}
+
+int rush_execute(char **tokens)
+{
+    if (tokens[0] == NULL)
         return 0;
 
-    for (int i = 0; i < LEN(token_buffer); i++)
+    for (int i = 0; i < LEN(tokens); i++)
     {
-        if ((strcmp(token_buffer[0], rush_builtins[i].name)) == 0)
-            return rush_builtins[i].func(token_buffer + 1);
+        if ((strcmp(tokens[0], rush_builtins[i].name)) == 0)
+            return rush_builtins[i].func(tokens + 1);
     }
 
-    fprintf(stderr, "%s: command not found\n", token_buffer[0]);
+    fprintf(stderr, "rush: %s: command not found\n", tokens[0]);
+
     return 0;
+}
+
+void rush_loop()
+{
+    char *line;
+    char **tokens;
+
+    int status;
+
+    /* keep executing loop while status = 0 */
+    do {
+        rush_prompt();
+        line = rush_read_line();
+        tokens = rush_tokenize(line);
+        status = rush_execute(tokens);
+
+        free(line);
+        free(tokens);
+
+    } while (!status);
 }

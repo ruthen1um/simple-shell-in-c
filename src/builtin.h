@@ -1,9 +1,6 @@
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
-#include <stdlib.h>
-#include <stdio.h>
-
 typedef struct {
     char *name;
     int (*func)(char *args[]);
@@ -11,6 +8,6 @@ typedef struct {
 
 extern rush_builtin rush_builtins[];
 
-int rush_exit(char *args[]);
+int rush_exit(char **args);
 
 #endif
