@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "core.h"
 #include "builtin.h"
 
@@ -7,17 +11,18 @@
 #define MAXTOKENBUFFER 256
 #define TOKENDELIM " \t"
 
-void rush_prompt()
+void
+rush_prompt()
 {
     fputs("> ", stdout);
 }
 
-char *rush_read_line()
+char *
+rush_read_line()
 {
     char *line_buffer = malloc(sizeof(char) * MAXLINEBUFFER);
 
-    if (line_buffer == NULL)
-    {
+    if (line_buffer == NULL) {
         fprintf(stderr, "%s at line %d: couldn't allocate line_buffer", __FILE__, __LINE__);
         exit(EXIT_FAILURE);
     }
@@ -34,20 +39,21 @@ char *rush_read_line()
         *) if there is a '\n' character, we do not want to include it in line_buffer
     */
 
-    if (strchr(line_buffer, '\n') == NULL)
+    if (strchr(line_buffer, '\n') == NULL) {
         while ((c = getc(stdin)) != '\n' && c != EOF);
-    else
+    } else {
         line_buffer[strcspn(line_buffer, "\n")] = 0;
+    }
 
     return line_buffer;
 }
 
-char **rush_tokenize(char *line)
+char **
+rush_tokenize(char *line)
 {
     char **token_buffer = malloc(sizeof(char *) * MAXTOKENBUFFER);
 
-    if (token_buffer == NULL)
-    {
+    if (token_buffer == NULL) {
         fprintf(stderr, "%s at line %d: couldn't allocate token_buffer", __FILE__, __LINE__);
         exit(EXIT_FAILURE);
     }
@@ -56,25 +62,25 @@ char **rush_tokenize(char *line)
 
     token_buffer[p] = strtok(line, TOKENDELIM);
 
-    if (token_buffer[p] == NULL)
+    if (token_buffer[p] == NULL) {
         return token_buffer;
+    }
 
     p++;
 
     char *token;
 
-    while (1)
-    {
+    while (1) {
         token = strtok(NULL, TOKENDELIM);
 
-        if (token == NULL && p < MAXTOKENBUFFER)
-        {
+        /* there is enough space in token_buffer*/
+        if (token == NULL && p < MAXTOKENBUFFER) {
             token_buffer[p] = token;
             break;
         }
 
-        if (p == MAXTOKENBUFFER)
-        {
+        /* if there is not enough space in token_buffer, then replace last element of token_buffer with NULL for proper functioning */
+        if (p == MAXTOKENBUFFER) {
             token_buffer[MAXTOKENBUFFER - 1] = NULL;
             break;
         }
@@ -85,15 +91,19 @@ char **rush_tokenize(char *line)
     return token_buffer;
 }
 
-int rush_execute(char **tokens)
+int
+rush_execute(char **tokens)
 {
-    if (tokens[0] == NULL)
+    /* nothing has been entered */
+    if (tokens[0] == NULL) {
         return 0;
+    }
 
-    for (int i = 0; i < LEN(tokens); i++)
-    {
-        if ((strcmp(tokens[0], rush_builtins[i].name)) == 0)
+    /* check if rush builtin has been entered */
+    for (size_t i = 0; i < LEN(tokens); i++) {
+        if ((strcmp(tokens[0], rush_builtins[i].name)) == 0) {
             return rush_builtins[i].func(tokens + 1);
+        }
     }
 
     fprintf(stderr, "rush: %s: command not found\n", tokens[0]);
@@ -101,7 +111,8 @@ int rush_execute(char **tokens)
     return 0;
 }
 
-void rush_loop()
+void
+rush_loop()
 {
     char *line;
     char **tokens;
